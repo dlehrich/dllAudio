@@ -1,23 +1,16 @@
 /*
- *  Source
- *      Functions
- *      - Play/Stop
- *      - Gain (randomized)
- *      - Pitch (radomized)
- *      - Pan (randomized)
- *      Params
- *      - isLoop
- *      - isPlaying
- *      - curGain
- *      - curPitch
- *      - curPan
- *      
+ *  dllAudio
+ *  easy access to HTML5 Web Audio API
+ *  
+ *  by Dan Lehrich
+ *  DLehrich@gmail.com
+ *  www.onthedll.com
  *
  *  Source.Types
- *      - Buffer
- *      - Oscillator
+ *      - dllBuffAudio: load and play an audio file. one-shot/looping, volume & pan (w/ randomization)
+ *      - dllOsc: monophonic oscillator. waveform type, frequency, attack/release time, volume & pan (w/ randomization)
  *
- *  DSP
+ *  DSP (***not yet implemented***)
  *      - Filter
  *      - Delay
  *      - Convolve
@@ -29,124 +22,9 @@
  *
  */
 
-/***********************************************************
- * CLASSES
- **********************************************************/
 
 /**************************************************
- * MAIN AUDIO SOURCE
- *************************************************/
-/*
-function dllSource(context){
-    this.context = context; //audio context
-    this.isPlaying = 0; //1 for currently playing
-    this.curGain = 1.0; //0.0 <==> 1.0
-    this.curPitch = 1.0;//playback speed
-    this.curPan = 0.0;// -1.0 (L) <=== 0.0 ===> 1.0 (R)
-    
-    //////////////////////////////////////////////
-    //Play/Stop - optional time to play in future
-    this.Play = function(time) {
-        if(typeof time === "undefined") {time=0;} //play immediately by default
-        this.noteOn(time);
-        this.isPlaying = 1;
-    }
-    this.Stop = function(time) {
-        if(typeof time === "undefined") {time=0;} //stop immediately by default
-        this.noteOff(time);
-        this.isPlaying = 0;
-    }
-    
-    //////////////////////////////////////////////
-    //Gain - 1 arg sets val, 2 args sets random range
-    this.setGain = function(min,max) {
-        if(typeof min != "undefined") { //assuming there is at least 1 argument
-            if(typeof max != "undefined") { //if there is a second argument
-                //return random rounded to 2 decimal places
-               this.curGain = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2));
-            }
-            else {
-                this.curGain = min; //otherwise, set to min
-            }
-        }
-    }
-    //change the gain over time
-    //  value 0.0<=>1.0
-    //  time (in seconds)
-    //  optional curve - LINEAR (default) or EXPONENTIAL
-    this.changeGain = function(val,time,curve) {
-        if(typeof curve === "undefined") {curve="LINEAR";} //default
-        if(curve==="LINEAR") {
-            this.curGain.linearRampToValueAtTime(this.context.currentTime,curGain);
-            this.curGain.linearRampToValueAtTime(this.context.currentTime+time, val);
-        }
-        if(curve==="EXPONENTIAL"){
-            this.curGain.exponentialRampToValueAtTime(this.context.currentTime,curGain);
-            this.curGain.exponentialRampToValueAtTime(this.context.currentTime+time, val);
-        }
-    }
-    
-    //////////////////////////////////////////////
-    //Pitch - 1 arg sets val, 2 args sets random range
-    this.setPitch = function(min,max) {
-        if(typeof min != "undefined") { //assuming there is at least 1 argument
-            if(typeof max != "undefined") { //if there is a second argument
-                //return random rounded to 2 decimal places
-               this.curPitch = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2));
-            }
-            else {
-                this.curPitch = min; //otherwise, set to min
-            }
-        }
-    }
-    //change the pitch over time
-    //  value 0.0<=>1.0
-    //  time (in seconds)
-    //  optional curve - LINEAR (default) or EXPONENTIAL
-    this.changePitch = function(val,time,curve) {
-        if(typeof curve === "undefined") {curve="LINEAR";} //default
-        if(curve==="LINEAR") {
-            this.curPitch.linearRampToValueAtTime(this.context.currentTime,curGain);
-            this.curPitch.linearRampToValueAtTime(this.context.currentTime+time, val);
-        }
-        if(curve==="EXPONENTIAL"){
-            this.curPitch.exponentialRampToValueAtTime(this.context.currentTime,curGain);
-            this.curPitch.exponentialRampToValueAtTime(this.context.currentTime+time, val);
-        }
-    }
-    
-    //////////////////////////////////////////////
-    //Pan
-    this.setPan = function(min,max) {
-        if(typeof min != "undefined") { //assuming there is at least 1 argument
-            if(typeof max != "undefined") { //if there is a second argument
-                //return random rounded to 2 decimal places
-               this.curPan = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2));
-            }
-            else {
-                this.curPan = min; //otherwise, set to min
-            }
-        }
-    }
-    //change pan over time
-    //  value 0.0<=>1.0
-    //  time (in seconds)
-    //  optional curve - LINEAR (default) or EXPONENTIAL
-    this.changePan = function(val,time,curve) {
-        if(typeof curve === "undefined") {curve="LINEAR";} //default
-        if(curve==="LINEAR") {
-            this.curPan.linearRampToValueAtTime(this.context.currentTime,curGain);
-            this.curPan.linearRampToValueAtTime(this.context.currentTime+time, val);
-        }
-        if(curve==="EXPONENTIAL"){
-            this.curPan.exponentialRampToValueAtTime(this.context.currentTime,curGain);
-            this.curPan.exponentialRampToValueAtTime(this.context.currentTime+time, val);
-        }
-    }
-}
-*/
-/**************************************************
- * SOURCE BUFFAUDIO
+ * SOURCE: dllBuffAudio
  *************************************************/
 function dllBuffAudio(context, filepath) {
     this.context = context;
@@ -295,7 +173,7 @@ function dllBuffAudio(context, filepath) {
 }
 
 /**************************************************
- * SOURCE OSCILLATOR
+ * SOURCE: dllOsc
  *************************************************/
 
 function dllOsc(context,waveform) {
@@ -360,51 +238,6 @@ function dllOsc(context,waveform) {
         this.env.gain.linearRampToValueAtTime(1.0, this.context.currentTime);
         this.env.gain.linearRampToValueAtTime(0.0, this.context.currentTime+this.releaseTime);
     }
-    
-    /*************************************
-     *V1 - using noteOn() and disconnect()
-    this.context = context;
-    this.waveform = waveform; //sine,square,saw,tri
-    this.curGain = 1.0;//0.0 <==> 1.0
-    this.curFreq = 440.0;//Hz
-    this.curPan = 0.0;//-1.0 (L) <=== 0.0 ===> 1.0 (R)
-    this.osc = null; //nodes...
-    this.gain = null;
-    this.pan = null;
-    
-    //create oscillator
-
-    //////////////////////////////////////////////
-    //Play a note - Feequency, Duration in ms
-    this.Play = function(freq,duration) {
-        this.osc = context.createOscillator();
-        this.osc.waveform = this.waveform;
-        this.curFreq = freq;
-        this.osc.frequency.value = this.curFreq;
-        //gain
-        this.gain = this.context.createGainNode();
-        this.gain.gain.value = this.curGain;
-        //pan
-        this.pan = this.context.createPanner();
-        this.context.listener.setPosition(0,0,0);
-        this.pan.setPosition(this.curPan,0,-0.5);      
-        //routing
-        this.osc.connect(this.gain);
-        this.gain.connect(this.pan);
-        this.pan.connect(this.context.destination);
-        //note on
-        this.osc.noteOn && this.osc.noteOn(0);
-        //schedule note off
-        var _this = this; //workaround for weird JS scoping in setTimeout()
-        setTimeout(function(){_this.Stop();}, duration); 
-    }
-    
-    //Panic Stop
-    this.Stop = function() {
-        console.log("Stopping");
-        this.osc.disconnect();
-    }
-    */
     
     //////////////////////////////////////////////
     //Gain - 1 arg sets val, 2 args sets random range
@@ -563,38 +396,3 @@ BufferLoader.prototype.load = function() {
     for (var i = 0; i < this.urlList.length; ++i)
         this.loadBuffer(this.urlList[i], i);
 }
-
-/*
-function BufferLoader(context,urlList,callback){
-    this.context=context;
-    this.urlList=urlList;
-    this.onload=callback;
-    this.bufferList=new Array();
-    this.loadCount=0;}
-    
-BufferLoader.prototype.loadBuffer=function(url,index){
-    var request=new XMLHttpRequest();
-    request.open("GET",url,true);
-    request.responseType="arraybuffer";
-    var loader=this;
-    request.onload=function(){
-        loader.context.decodeAudioData(request.response,function(buffer){
-        if(!buffer){
-            alert('error decoding file data: '+url);
-            return;}
-        loader.bufferList[index]=buffer;
-        if(++loader.loadCount==loader.urlList.length)
-            {loader.onload(loader.bufferList);}
-            })
-    ;}
-    request.onerror=function(){
-        alert('BufferLoader: XHR error')
-        ;}
-    request.send();
-}
-
-BufferLoader.prototype.load=function(){
-    for(var i=0;i<this.urlList.length;++i)
-    {this.loadBuffer(this.urlList[i],i);}
-}
-*/
