@@ -9,7 +9,7 @@ var context;
 try {context = new webkitAudioContext();}
 catch(e) {alert("Web Audio not supported in this browser.");}
 
-//Sample Audio
+//Audio File Playback
 mySound = dllBuffAudio(context, "..path/to/sound.wav");
 mySound.setGain(0.5); set gain to 50%
 mySound.isLoop = true; //support for looping sounds
