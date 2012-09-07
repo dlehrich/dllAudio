@@ -20,8 +20,12 @@
  *      - Dynamics
  *      - Waveshape
  *
+ *  NEXT TASKS:
+ *  - create first effect
+ *  - fill in missing functions on BuffAudio and Osc
+ *  - consolidate Pan/Gain into standalone object?
+ *
  */
-
 
 /**************************************************
  * SOURCE: dllBuffAudio
@@ -41,66 +45,49 @@ function dllBuffAudio(context, filepath) {
     
     //////////////////////////////////////////////
     //File load via BufferLoader
-    //callback declared first...
-    this.setBuffSource = function(buf) {
+    this.setBuffSource = function(buf) { //callback declared first...
         source = buf[0];
         this.isLoaded = 1;
     }
-    //...so we can get audio file from server...
-    var buf = new BufferLoader(
+    var buf = new BufferLoader( //...so we can get audio file from server...
         context,
         [filepath,],
         this.setBuffSource
         )
-    //...& load
-    buf.load();
+    buf.load(); //...& load
 
-    
     //////////////////////////////////////////////
     //Play/Stop - optional time to play in future
     this.Play = function(time) {
-        //audio data
-        this.buffer = this.context.createBufferSource();
+        this.buffer = this.context.createBufferSource(); //audio data
         this.buffer.buffer = source;
-        //looping
-        this.buffer.loop = this.isLoop;
+        this.buffer.loop = this.isLoop; //looping
         if(this.isLoop===true){this.isLooping=true;console.log("set true");}
-        //pitch
-        this.buffer.playbackRate.value = this.curPitch;
-        //gain
-        this.gain = this.context.createGainNode();
+        this.buffer.playbackRate.value = this.curPitch; //pitch
+        this.gain = this.context.createGainNode(); //gain
         this.gain.gain.value = this.curGain;
-        //pan
-        this.pan = this.context.createPanner();
+        this.pan = this.context.createPanner(); //pan
         this.context.listener.setPosition(0,0,0);
         this.pan.setPosition(this.curPan,0,-0.5);      
-        //routing
-        this.buffer.connect(this.gain);
+        this.buffer.connect(this.gain); //routing
         this.gain.connect(this.pan);
         this.pan.connect(this.context.destination);
-        //playback
-        if(typeof time === "undefined") {time=0;} //play immediately by default
+        if(typeof time === "undefined") {time=0;}    //play immediately by default
         this.buffer.noteOn(time);
-        
     }
+    //Stop is for looping sounds only, one-shots aren't tracked
     this.Stop = function(time) {
         if(this.isLooping===true) {
-            console.log("Stop");
-            //if(typeof time === "undefined") {time=0;} //stop immediately by default
             this.buffer.noteOff(0);
-            
-            console.log("off");
             this.isLooping = 0;
         }
     }
-    
     //////////////////////////////////////////////
     //Gain - 1 arg sets val, 2 args sets random range
     this.setGain = function(min,max) {
         if(typeof min != "undefined") { //assuming there is at least 1 argument
             if(typeof max != "undefined") { //if there is a second argument
-                //return random rounded to 2 decimal places
-               this.curGain = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2));
+               this.curGain = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2)); //random rounded to 2 decimal places
             }
             else {this.curGain = min;} //otherwise, set to min
             if(this.gain){
@@ -122,7 +109,6 @@ function dllBuffAudio(context, filepath) {
             this.gain.gain.exponentialRampToValueAtTime(val, this.context.currentTime+time);
         }
     }
-    
     //////////////////////////////////////////////
     //Pan - 1 arg sets val, 2 args sets random range
     //TODO - support more sophisticated 3d placement
@@ -130,8 +116,7 @@ function dllBuffAudio(context, filepath) {
     this.setPan = function(min,max) {
         if(typeof min != "undefined") { //assuming there is at least 1 argument
             if(typeof max != "undefined") { //if there is a second argument
-                //return random rounded to 2 decimal places
-               this.curPan = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2));
+               this.curPan = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2)); //random rounded to 2 decimal places
             }
             else {this.curPan = min;} //otherwise, set to min
             if(this.pan){
@@ -140,14 +125,12 @@ function dllBuffAudio(context, filepath) {
         }
         else{console.log("dllError: setPan() needs an argument");}
     }
-    
     //////////////////////////////////////////////
     //Pitch - 1 arg sets val, 2 args sets random range
     this.setPitch = function(min,max) {
         if(typeof min != "undefined") { //assuming there is at least 1 argument
             if(typeof max != "undefined") { //if there is a second argument
-                //return random rounded to 2 decimal places
-               this.curPitch = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2));
+               this.curPitch = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2)); //return random rounded to 2 decimal places
             }
             else {this.curPitch = min;} //otherwise, set to min
             if(this.buffer){
@@ -168,17 +151,15 @@ function dllBuffAudio(context, filepath) {
             this.buffer.playbackRate.exponentialRampToValueAtTime(this.curPitch, this.context.currentTime);
             this.buffer.playbackRate.exponentialRampToValueAtTime(val, this.context.currentTime+time);
         }
-    }
-    
+    } 
 }
 
 /**************************************************
  * SOURCE: dllOsc
  *************************************************/
-
 function dllOsc(context,waveform) {
     this.context = context;
-    this.waveform = waveform; //sine,square,saw,tri
+    this.type = waveform; //sine,square,saw,tri
     this.curGain = 1.0;//0.0 <==> 1.0
     this.curFreq = 440.0;//Hz
     this.curPan = 0.0;//-1.0 (L) <=== 0.0 ===> 1.0 (R)
@@ -194,58 +175,44 @@ function dllOsc(context,waveform) {
     this.osc.waveform = this.waveform;
     this.curFreq = freq;
     this.osc.frequency.value = this.curFreq;
-        //envelope (internal gain for note-on/off)
-    this.env = this.context.createGainNode();
+    this.env = this.context.createGainNode();//envelope (internal gain for note-on/off)
     this.env.gain.value = 0.0; //(note off) by default
-        //main gain
-    this.gain = this.context.createGainNode();
+    this.gain = this.context.createGainNode(); //main gain
     this.gain.gain.value = this.curGain;
-        //pan
-    this.pan = this.context.createPanner();
+    this.pan = this.context.createPanner(); //pan
     this.context.listener.setPosition(0,0,0);
     this.pan.setPosition(this.curPan,0,-0.5);
-        //routing
-    this.osc.connect(this.env); //oscillator to envelope...
+    this.osc.connect(this.env); //Routing - oscillator to envelope...
     this.env.connect(this.gain);//...to gain
     this.gain.connect(this.pan);//...to panner
     this.pan.connect(this.context.destination);//...to output
-    
-    //now turn it on - don't worry the envelope is at 0 - it will stay on for the life of the osc
-    this.osc.noteOn && this.osc.noteOn(0);
+    this.osc.noteOn && this.osc.noteOn(0); //turn on note with envelope at 0
     
     //////////////////////////////////////////////
     //Play a note - Feequency, Duration (optional) in ms
     this.Play = function(freq,duration) {
-        console.log("Playing...");
-        //set frequency
-        this.curFreq = freq;
+        this.curFreq = freq; //set frequency
         this.osc.frequency.value = this.curFreq;
-        //turn on envelope
-        this.env.gain.linearRampToValueAtTime(0.0, this.context.currentTime);
+        this.env.gain.linearRampToValueAtTime(0.0, this.context.currentTime); //turn on envelope
         this.env.gain.linearRampToValueAtTime(1.0, this.context.currentTime+this.attackTime);
-        //if there is a duration specified, schedule Stop event
-        if(typeof duration != "undefined") {
+        
+        if(typeof duration != "undefined") { //if duration specified, schedule Stop event
             var _this = this; //workaround for weird JS scoping in setTimeout()
             setTimeout(function(){_this.Stop();}, duration); 
         }
     }
-    
     //////////////////////////////////////////////
     //Stop a note, immediately
     this.Stop = function() {
-        console.log("Stopping...");
-        //turn off envelope
-        this.env.gain.linearRampToValueAtTime(1.0, this.context.currentTime);
+        this.env.gain.linearRampToValueAtTime(1.0, this.context.currentTime); //turn off envelope
         this.env.gain.linearRampToValueAtTime(0.0, this.context.currentTime+this.releaseTime);
     }
-    
     //////////////////////////////////////////////
     //Gain - 1 arg sets val, 2 args sets random range
     this.setGain = function(min,max) {
         if(typeof min != "undefined") { //assuming there is at least 1 argument
             if(typeof max != "undefined") { //if there is a second argument
-                //return random rounded to 2 decimal places
-               this.curGain = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2));
+               this.curGain = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2)); //random rounded to 2 decimals
             }
             else {this.curGain = min;} //otherwise, set to min
             if(this.gain){
@@ -267,7 +234,6 @@ function dllOsc(context,waveform) {
             this.gain.gain.exponentialRampToValueAtTime(val, this.context.currentTime+time);
         }
     }
-    
     //////////////////////////////////////////////
     //Pan - 1 arg sets val, 2 args sets random range
     //TODO - support more sophisticated 3d placement
@@ -275,8 +241,7 @@ function dllOsc(context,waveform) {
     this.setPan = function(min,max) {
         if(typeof min != "undefined") { //assuming there is at least 1 argument
             if(typeof max != "undefined") { //if there is a second argument
-                //return random rounded to 2 decimal places
-               this.curPan = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2));
+               this.curPan = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2)); //random rounded to 2 decimals
             }
             else {this.curPan = min;} //otherwise, set to min
             if(this.pan){
@@ -285,14 +250,12 @@ function dllOsc(context,waveform) {
         }
         else{console.log("dllError: setPan() needs an argument");}
     }
-    
     //////////////////////////////////////////////
     //Freq - 1 arg sets val, 2 args sets random range
     this.setFreq = function(min,max) {
         if(typeof min != "undefined") { //assuming there is at least 1 argument
             if(typeof max != "undefined") { //if there is a second argument
-                //return random rounded to 2 decimal places
-               this.curFreq = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2));
+               this.curFreq = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2)); //random rounded to 2 decimals
             }
             else {this.curFreq = min;} //otherwise, set to min
             if(this.osc){
@@ -314,7 +277,6 @@ function dllOsc(context,waveform) {
             this.osc.frequency.exponentialRampToValueAtTime(val, this.context.currentTime+time);
         }
     }
-    
     this.setWaveform = function(wave) {
         if (wave==="SINE"){
             this.waveform = 0;
@@ -322,25 +284,22 @@ function dllOsc(context,waveform) {
         else if (wave==="SQUARE"){
             this.waveform = 1;
         }
-        else if (wave==="SAWTOOTH"){
+        else if (wave==="SAW"){
             this.waveform = 2;
         }
-        else if (wave==="TRIANGLE"){
+        else if (wave==="TRI"){
             this.waveform = 3;
         }
         else{console.log("dllError: setWaveform() - invalid waveform", wave);}
-        this.osc.waveform = this.waveform;
+        this.osc.type = this.waveform;
     }
+    this.setWaveform(waveform);
 }
-
-
 
 /**************************************************
  * HELP FUNCTIONS
  *************************************************/
 //source - http://www.html5rocks.com/en/tutorials/webaudio/intro/js/buffer-loader.js
-
-
 function BufferLoader(context, urlList, callback) {
     this.context = context;
     this.urlList = urlList;
@@ -348,15 +307,12 @@ function BufferLoader(context, urlList, callback) {
     this.bufferList = new Array();
     this.loadCount = 0;
 }
-
 BufferLoader.prototype.loadBuffer = function(url, index) {
     // Load buffer asynchronously
     var request = new XMLHttpRequest();
     request.open("GET", url, true);
     request.responseType = "arraybuffer";
-
     var loader = this;
-
     request.onload = function() {
         var buffer;
         try {
@@ -364,34 +320,21 @@ BufferLoader.prototype.loadBuffer = function(url, index) {
         } catch(e) {
             alert('error decoding file data: ' + url);
         }
-
         try {
-            console.log("1");
             loader.bufferList[index] = buffer;
-            
-            console.log("2");
             if (++loader.loadCount == loader.urlList.length){
-                console.log("3");
-                console.log(loader.bufferList);
-                console.log("onload",onload);
-                console.log("test",loader.onload);
                 loader.onload(loader.bufferList);
-                console.log(loader.bufferList);
-                
             }
         } catch(e) {
             console.log(e);
             alert('BufferLoader: callback problem');
         }
     }
-
     request.onerror = function() {
         alert('BufferLoader: XHR error');        
     }
-
     request.send();
 }
-
 BufferLoader.prototype.load = function() {
     for (var i = 0; i < this.urlList.length; ++i)
         this.loadBuffer(this.urlList[i], i);
