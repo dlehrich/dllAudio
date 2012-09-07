@@ -3,7 +3,7 @@ dllAudio **WORK IN PROGRESS**
 easy javascript access to the HTML5 Web Audio API
 
 Sample use of dllAudio:
-'''
+```
 //create audio context
 var context;
 try {context = new webkitAudioContext();}
@@ -20,7 +20,7 @@ mySynth = dllOsc(context, "SINE"); //Wavetypes - SINE, SQUARE, SAW, TRI
 mySynth.setAttack(.05);//support for attack and release time in seconds
 mySynth.Play(frequency, duration);
 
-'''
+```
 
 by Dan Lehrich  
 DLehrich@gmail.com  
