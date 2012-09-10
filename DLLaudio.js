@@ -11,14 +11,14 @@
  *      - dllOsc: monophonic oscillator. waveform type, frequency, attack/release time, volume & pan (w/ randomization)
  *
  *  DSP (***not yet implemented***)
- *      - Filter
- *      - Delay
- *      - Convolve
- *      - Analyze
- *      - Split
- *      - Merge
+ *      - Filter [BiquadFilterNode]
+ *      - Delay [DelayNode]
+ *      - Convolver - Impulse Response [ConvolverNode]
+ *      - Split [AudioChannelSplitter]
+ *      - Merge [AudioChannelMerger]
  *      - Dynamics
- *      - Waveshape
+ *      - Analyze [RealtimeAnalyserNode]
+ *      - Waveshape [WaveShaperNode]
  *
  *  NEXT TASKS:
  *  - create first effect
@@ -32,13 +32,14 @@
  *************************************************/
 function dllBuffAudio(context, filepath) {
     this.context = context;
+    this.destination = this.context.destination;
     this.isLoaded = false;
     this.curGain = 1.0;//0.0 <==> 1.0
     this.curPitch = 1.0;//playback speed
     this.curPan = 0.0;//-1.0 (L) <=== 0.0 ===> 1.0 (R)
     this.isLoop = false;
     this.isLooping = false;
-    this.buffer = null; //nodes...
+    this.node = null; //nodes...
     this.gain = null;
     this.pan = null;
     var source = null; //private buffer audio data
@@ -59,26 +60,26 @@ function dllBuffAudio(context, filepath) {
     //////////////////////////////////////////////
     //Play/Stop - optional time to play in future
     this.Play = function(time) {
-        this.buffer = this.context.createBufferSource(); //audio data
-        this.buffer.buffer = source;
-        this.buffer.loop = this.isLoop; //looping
+        this.node = this.context.createBufferSource(); //audio data
+        this.node.buffer = source;
+        this.node.loop = this.isLoop; //looping
         if(this.isLoop===true){this.isLooping=true;console.log("set true");}
-        this.buffer.playbackRate.value = this.curPitch; //pitch
+        this.node.playbackRate.value = this.curPitch; //pitch
         this.gain = this.context.createGainNode(); //gain
         this.gain.gain.value = this.curGain;
         this.pan = this.context.createPanner(); //pan
         this.context.listener.setPosition(0,0,0);
         this.pan.setPosition(this.curPan,0,-0.5);      
-        this.buffer.connect(this.gain); //routing
+        this.node.connect(this.gain); //routing
         this.gain.connect(this.pan);
-        this.pan.connect(this.context.destination);
+        this.pan.connect(this.destination);
         if(typeof time === "undefined") {time=0;}    //play immediately by default
-        this.buffer.noteOn(time);
+        this.node.noteOn(time);
     }
     //Stop is for looping sounds only, one-shots aren't tracked
     this.Stop = function(time) {
         if(this.isLooping===true) {
-            this.buffer.noteOff(0);
+            this.node.noteOff(0);
             this.isLooping = 0;
         }
     }
@@ -133,8 +134,8 @@ function dllBuffAudio(context, filepath) {
                this.curPitch = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2)); //return random rounded to 2 decimal places
             }
             else {this.curPitch = min;} //otherwise, set to min
-            if(this.buffer){
-                this.buffer.playbackRate.setValueAtTime(this.curPitch,this.context.currentTime);
+            if(this.node){
+                this.node.playbackRate.setValueAtTime(this.curPitch,this.context.currentTime);
             }
         }
         else{console.log("dllError: setPitch() needs an argument");}
@@ -144,14 +145,21 @@ function dllBuffAudio(context, filepath) {
     this.changePitch = function(val,time,curve) {
         if(typeof curve === "undefined") {curve="LINEAR";} //default
         if(curve==="LINEAR") {
-            this.buffer.playbackRate.linearRampToValueAtTime(this.curPitch, this.context.currentTime);
-            this.buffer.playbackRate.linearRampToValueAtTime(val, this.context.currentTime+time);
+            this.node.playbackRate.linearRampToValueAtTime(this.curPitch, this.context.currentTime);
+            this.node.playbackRate.linearRampToValueAtTime(val, this.context.currentTime+time);
         }
         if(curve==="EXPONENTIAL"){
-            this.buffer.playbackRate.exponentialRampToValueAtTime(this.curPitch, this.context.currentTime);
-            this.buffer.playbackRate.exponentialRampToValueAtTime(val, this.context.currentTime+time);
+            this.node.playbackRate.exponentialRampToValueAtTime(this.curPitch, this.context.currentTime);
+            this.node.playbackRate.exponentialRampToValueAtTime(val, this.context.currentTime+time);
         }
-    } 
+    }
+    //connect output to somewhere
+    this.connectTo = function(destination) {
+        this.destination = destination.node;
+        if(this.node !== null) { //if the node exists (sound is already playing)
+            this.node.connect(this.destination);
+        }
+    }
 }
 
 /**************************************************
@@ -159,11 +167,12 @@ function dllBuffAudio(context, filepath) {
  *************************************************/
 function dllOsc(context,waveform) {
     this.context = context;
+    this.destination = this.context.destination;
     this.type = waveform; //sine,square,saw,tri
     this.curGain = 1.0;//0.0 <==> 1.0
     this.curFreq = 440.0;//Hz
     this.curPan = 0.0;//-1.0 (L) <=== 0.0 ===> 1.0 (R)
-    this.osc = null; //nodes
+    this.node = null; //nodes
     this.gain = null;
     this.pan = null;
     this.envelope = null;
@@ -171,10 +180,10 @@ function dllOsc(context,waveform) {
     this.releaseTime = .01; //release time in milliseconds
     
     //create oscillator, set envelope gain to Null, and turn it on by default
-    this.osc = context.createOscillator();
-    this.osc.waveform = this.waveform;
+    this.node = context.createOscillator();
+    this.node.waveform = this.waveform;
     this.curFreq = freq;
-    this.osc.frequency.value = this.curFreq;
+    this.node.frequency.value = this.curFreq;
     this.env = this.context.createGainNode();//envelope (internal gain for note-on/off)
     this.env.gain.value = 0.0; //(note off) by default
     this.gain = this.context.createGainNode(); //main gain
@@ -182,17 +191,17 @@ function dllOsc(context,waveform) {
     this.pan = this.context.createPanner(); //pan
     this.context.listener.setPosition(0,0,0);
     this.pan.setPosition(this.curPan,0,-0.5);
-    this.osc.connect(this.env); //Routing - oscillator to envelope...
+    this.node.connect(this.env); //Routing - oscillator to envelope...
     this.env.connect(this.gain);//...to gain
     this.gain.connect(this.pan);//...to panner
-    this.pan.connect(this.context.destination);//...to output
-    this.osc.noteOn && this.osc.noteOn(0); //turn on note with envelope at 0
+    this.pan.connect(this.destination);//...to output
+    this.node.noteOn && this.node.noteOn(0); //turn on note with envelope at 0
     
     //////////////////////////////////////////////
     //Play a note - Feequency, Duration (optional) in ms
     this.Play = function(freq,duration) {
         this.curFreq = freq; //set frequency
-        this.osc.frequency.value = this.curFreq;
+        this.node.frequency.value = this.curFreq;
         this.env.gain.linearRampToValueAtTime(0.0, this.context.currentTime); //turn on envelope
         this.env.gain.linearRampToValueAtTime(1.0, this.context.currentTime+this.attackTime);
         
@@ -258,23 +267,23 @@ function dllOsc(context,waveform) {
                this.curFreq = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2)); //random rounded to 2 decimals
             }
             else {this.curFreq = min;} //otherwise, set to min
-            if(this.osc){
-                this.osc.frequency.setValueAtTime(this.curFreq,this.context.currentTime);
+            if(this.node){
+                this.node.frequency.setValueAtTime(this.curFreq,this.context.currentTime);
             }
         }
         else{console.log("dllError: setFreq() needs an argument");}
     }
-    //change the gain over time (in seconds)
+    //change the pitch over time (in seconds)
     //  optional curve - LINEAR (default) or EXPONENTIAL
     this.changePitch = function(val,time,curve) {
         if(typeof curve === "undefined") {curve="LINEAR";} //default
         if(curve==="LINEAR") {
-            this.osc.frequency.linearRampToValueAtTime(this.curFreq, this.context.currentTime);
-            this.osc.frequency.linearRampToValueAtTime(val, this.context.currentTime+time);
+            this.node.frequency.linearRampToValueAtTime(this.curFreq, this.context.currentTime);
+            this.node.frequency.linearRampToValueAtTime(val, this.context.currentTime+time);
         }
         if(curve==="EXPONENTIAL"){
-            this.osc.frequency.exponentialRampToValueAtTime(this.curFreq, this.context.currentTime);
-            this.osc.frequency.exponentialRampToValueAtTime(val, this.context.currentTime+time);
+            this.node.frequency.exponentialRampToValueAtTime(this.curFreq, this.context.currentTime);
+            this.node.frequency.exponentialRampToValueAtTime(val, this.context.currentTime+time);
         }
     }
     this.setWaveform = function(wave) {
@@ -291,10 +300,77 @@ function dllOsc(context,waveform) {
             this.waveform = 3;
         }
         else{console.log("dllError: setWaveform() - invalid waveform", wave);}
-        this.osc.type = this.waveform;
+        this.node.type = this.waveform;
     }
     this.setWaveform(waveform);
+    
+    //connect output to somewhere
+    this.connectTo = function(destination) {
+        this.destination = destination.node;
+        if(this.node !== null) { //if the node exists (sound is already playing)
+            this.node.connect(this.destination);
+        }
+    }
 }
+
+/**************************************************
+ * DSP - Filter
+ *      Types:
+ *      0 - Lowpass (allow lows through,second-order, 12dB/octave rolloff)
+ *      1 - Highpass (allow highs through, second-order, 12dB/octave rolloff)
+ *      2 - Bandpass (allow a range through, reject above and below center freq)
+ *      3 - Lowshelf (allow all through, boost/cut lows )
+ *      4 - HighShelf (allow all through, boost/cut highs)
+ *      5 - Peaking (allow all through, boost/cut range)
+ *      6 - Notch (allow all through except a range)
+ *      7 - Allpass
+ *************************************************/
+function dllDSP_Filter (context, type) {
+    this.context = context;
+    this.type = type;
+    this.freq = 440.0;
+    this.Q = 0.0;
+    this.gain = 0.0;//boost or cut - in dB - for Lowshelf, Highshelf, Peaking
+    this.node = null;//filter node
+    this.node = context.createBiquadFilter(); //create filter and connect to output by default
+    this.node.type = this.type;
+    this.node.frequency.value = this.freq;
+    this.node.Q.value = this.Q;
+    this.node.connect(context.destination);
+    
+    this.setType = function(type) {
+        this.type = type;
+        this.node.type = this.type;
+    }
+    
+    this.setFreq = function(freq) {
+        this.freq = freq;
+        this.node.frequency.value = this.freq;
+    }
+    //change the freq over time (in seconds)
+    //  optional curve - LINEAR (default) or EXPONENTIAL
+    this.changeFreq = function(val,time,curve) {
+        if(typeof curve === "undefined") {curve="LINEAR";} //default
+        if(curve==="LINEAR") {
+            this.node.frequency.linearRampToValueAtTime(this.freq, this.context.currentTime);
+            this.node.frequency.linearRampToValueAtTime(val, this.context.currentTime+time);
+        }
+        if(curve==="EXPONENTIAL"){
+            this.node.frequency.exponentialRampToValueAtTime(this.freq, this.context.currentTime);
+            this.node.frequency.exponentialRampToValueAtTime(val, this.context.currentTime+time);
+        }
+    }
+    this.setQ = function(Q) {
+        this.Q = Q;
+        this.node.Q = this.Q;
+    }
+    //connect output to somewhere
+    this.connectTo = function(destination) {
+        this.destination = destination.node;
+        if(this.node !== null) { //if the node exists (sound is already playing)
+            this.node.connect(this.destination);
+        }
+    }
 
 /**************************************************
  * HELP FUNCTIONS
