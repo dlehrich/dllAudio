@@ -1,5 +1,4 @@
-/*
- *  dllAudio
+/*  dllAudio
  *  easy access to HTML5 Web Audio API
  *  
  *  by Dan Lehrich
@@ -50,11 +49,8 @@ function dllBuffAudio(context, filepath) {
         source = buf[0];
         this.isLoaded = 1;
     }
-    var buf = new BufferLoader( //...so we can get audio file from server...
-        context,
-        [filepath,],
-        this.setBuffSource
-        )
+    //...so we can get audio file from server...
+    var buf = new BufferLoader(context,[filepath],this.setBuffSource);
     buf.load(); //...& load
 
     //////////////////////////////////////////////
@@ -63,7 +59,7 @@ function dllBuffAudio(context, filepath) {
         this.node = this.context.createBufferSource(); //audio data
         this.node.buffer = source;
         this.node.loop = this.isLoop; //looping
-        if(this.isLoop===true){this.isLooping=true;console.log("set true");}
+        if(this.isLoop===true){this.isLooping=true;}
         this.node.playbackRate.value = this.curPitch; //pitch
         this.gain = this.context.createGainNode(); //gain
         this.gain.gain.value = this.curGain;
@@ -86,8 +82,8 @@ function dllBuffAudio(context, filepath) {
     //////////////////////////////////////////////
     //Gain - 1 arg sets val, 2 args sets random range
     this.setGain = function(min,max) {
-        if(typeof min != "undefined") { //assuming there is at least 1 argument
-            if(typeof max != "undefined") { //if there is a second argument
+        if(typeof min !== "undefined") { //assuming there is at least 1 argument
+            if(typeof max !== "undefined") { //if there is a second argument
                this.curGain = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2)); //random rounded to 2 decimal places
             }
             else {this.curGain = min;} //otherwise, set to min
@@ -115,8 +111,8 @@ function dllBuffAudio(context, filepath) {
     //TODO - support more sophisticated 3d placement
     //TODO - automated change over time
     this.setPan = function(min,max) {
-        if(typeof min != "undefined") { //assuming there is at least 1 argument
-            if(typeof max != "undefined") { //if there is a second argument
+        if(typeof min !== "undefined") { //assuming there is at least 1 argument
+            if(typeof max !== "undefined") { //if there is a second argument
                this.curPan = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2)); //random rounded to 2 decimal places
             }
             else {this.curPan = min;} //otherwise, set to min
@@ -129,8 +125,8 @@ function dllBuffAudio(context, filepath) {
     //////////////////////////////////////////////
     //Pitch - 1 arg sets val, 2 args sets random range
     this.setPitch = function(min,max) {
-        if(typeof min != "undefined") { //assuming there is at least 1 argument
-            if(typeof max != "undefined") { //if there is a second argument
+        if(typeof min !== "undefined") { //assuming there is at least 1 argument
+            if(typeof max !== "undefined") { //if there is a second argument
                this.curPitch = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2)); //return random rounded to 2 decimal places
             }
             else {this.curPitch = min;} //otherwise, set to min
@@ -176,8 +172,8 @@ function dllOsc(context,waveform) {
     this.gain = null;
     this.pan = null;
     this.envelope = null;
-    this.attackTime = .01; //attack time in milliseconds
-    this.releaseTime = .01; //release time in milliseconds
+    this.attackTime = 0.01; //attack time in milliseconds
+    this.releaseTime = 0.01; //release time in milliseconds
     
     //create oscillator, set envelope gain to Null, and turn it on by default
     this.node = context.createOscillator();
@@ -205,7 +201,7 @@ function dllOsc(context,waveform) {
         this.env.gain.linearRampToValueAtTime(0.0, this.context.currentTime); //turn on envelope
         this.env.gain.linearRampToValueAtTime(1.0, this.context.currentTime+this.attackTime);
         
-        if(typeof duration != "undefined") { //if duration specified, schedule Stop event
+        if(typeof duration !== "undefined") { //if duration specified, schedule Stop event
             var _this = this; //workaround for weird JS scoping in setTimeout()
             setTimeout(function(){_this.Stop();}, duration); 
         }
@@ -219,8 +215,8 @@ function dllOsc(context,waveform) {
     //////////////////////////////////////////////
     //Gain - 1 arg sets val, 2 args sets random range
     this.setGain = function(min,max) {
-        if(typeof min != "undefined") { //assuming there is at least 1 argument
-            if(typeof max != "undefined") { //if there is a second argument
+        if(typeof min !== "undefined") { //assuming there is at least 1 argument
+            if(typeof max !== "undefined") { //if there is a second argument
                this.curGain = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2)); //random rounded to 2 decimals
             }
             else {this.curGain = min;} //otherwise, set to min
@@ -248,8 +244,8 @@ function dllOsc(context,waveform) {
     //TODO - support more sophisticated 3d placement
     //TODO - automated change over time
     this.setPan = function(min,max) {
-        if(typeof min != "undefined") { //assuming there is at least 1 argument
-            if(typeof max != "undefined") { //if there is a second argument
+        if(typeof min !== "undefined") { //assuming there is at least 1 argument
+            if(typeof max !== "undefined") { //if there is a second argument
                this.curPan = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2)); //random rounded to 2 decimals
             }
             else {this.curPan = min;} //otherwise, set to min
@@ -262,8 +258,8 @@ function dllOsc(context,waveform) {
     //////////////////////////////////////////////
     //Freq - 1 arg sets val, 2 args sets random range
     this.setFreq = function(min,max) {
-        if(typeof min != "undefined") { //assuming there is at least 1 argument
-            if(typeof max != "undefined") { //if there is a second argument
+        if(typeof min !== "undefined") { //assuming there is at least 1 argument
+            if(typeof max !== "undefined") { //if there is a second argument
                this.curFreq = parseFloat(Math.min(min +(Math.random()*(max-min)),max).toFixed(2)); //random rounded to 2 decimals
             }
             else {this.curFreq = min;} //otherwise, set to min
@@ -314,66 +310,7 @@ function dllOsc(context,waveform) {
 }
 
 /**************************************************
- * DSP - Filter
- *      Types:
- *      0 - Lowpass (allow lows through,second-order, 12dB/octave rolloff)
- *      1 - Highpass (allow highs through, second-order, 12dB/octave rolloff)
- *      2 - Bandpass (allow a range through, reject above and below center freq)
- *      3 - Lowshelf (allow all through, boost/cut lows )
- *      4 - HighShelf (allow all through, boost/cut highs)
- *      5 - Peaking (allow all through, boost/cut range)
- *      6 - Notch (allow all through except a range)
- *      7 - Allpass
- *************************************************/
-function dllDSP_Filter (context, type) {
-    this.context = context;
-    this.type = type;
-    this.freq = 440.0;
-    this.Q = 0.0;
-    this.gain = 0.0;//boost or cut - in dB - for Lowshelf, Highshelf, Peaking
-    this.node = null;//filter node
-    this.node = context.createBiquadFilter(); //create filter and connect to output by default
-    this.node.type = this.type;
-    this.node.frequency.value = this.freq;
-    this.node.Q.value = this.Q;
-    this.node.connect(context.destination);
-    
-    this.setType = function(type) {
-        this.type = type;
-        this.node.type = this.type;
-    }
-    
-    this.setFreq = function(freq) {
-        this.freq = freq;
-        this.node.frequency.value = this.freq;
-    }
-    //change the freq over time (in seconds)
-    //  optional curve - LINEAR (default) or EXPONENTIAL
-    this.changeFreq = function(val,time,curve) {
-        if(typeof curve === "undefined") {curve="LINEAR";} //default
-        if(curve==="LINEAR") {
-            this.node.frequency.linearRampToValueAtTime(this.freq, this.context.currentTime);
-            this.node.frequency.linearRampToValueAtTime(val, this.context.currentTime+time);
-        }
-        if(curve==="EXPONENTIAL"){
-            this.node.frequency.exponentialRampToValueAtTime(this.freq, this.context.currentTime);
-            this.node.frequency.exponentialRampToValueAtTime(val, this.context.currentTime+time);
-        }
-    }
-    this.setQ = function(Q) {
-        this.Q = Q;
-        this.node.Q = this.Q;
-    }
-    //connect output to somewhere
-    this.connectTo = function(destination) {
-        this.destination = destination.node;
-        if(this.node !== null) { //if the node exists (sound is already playing)
-            this.node.connect(this.destination);
-        }
-    }
-
-/**************************************************
- * HELP FUNCTIONS
+ * BUFFER FUNCTIONS
  *************************************************/
 //source - http://www.html5rocks.com/en/tutorials/webaudio/intro/js/buffer-loader.js
 function BufferLoader(context, urlList, callback) {
@@ -413,5 +350,5 @@ BufferLoader.prototype.loadBuffer = function(url, index) {
 }
 BufferLoader.prototype.load = function() {
     for (var i = 0; i < this.urlList.length; ++i)
-        this.loadBuffer(this.urlList[i], i);
+        {this.loadBuffer(this.urlList[i], i);}
 }
